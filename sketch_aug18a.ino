@@ -13,7 +13,8 @@ long duration;
 float distance;
 
 const int spookDistance = 35;
-int servo_pos=0;
+const int revDistance=10;
+int servo_pos=45;
 int increaseServoAngle=1;
 
 
@@ -27,18 +28,19 @@ void setup() {
   pinMode(rightRev, OUTPUT);
   pinMode(left, OUTPUT);
   pinMode(leftRev, OUTPUT);
-  servo.attach(2)
+  servo.attach(2);
   servo.write(servo_pos);
   delay(10);
 }
 
 void loop() {
-  if (servo_pos == 180) {
-    increaseAngle = -1;
-  } else if (servo_pos == 0) {
-    increaseAngle = 1;
+  if (servo_pos == 135) {
+    increaseServoAngle = -1;
+  } else if (servo_pos == 45) {
+    increaseServoAngle = 1;
   }
-  servo_pos += increaseAngle;
+
+  servo_pos += increaseServoAngle;
   servo.write(servo_pos);  
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -47,10 +49,25 @@ void loop() {
   duration = pulseIn(echoPin, HIGH);
   distance = duration*SOUND_VELOCITY/2;
   
-  if (distance > 35) {
+  if (distance > spookDistance) {
+    analogWrite(enRight, 150);
+    analogWrite(enLeft, 150);                
     digitalWrite(right, HIGH);
     digitalWrite(left, HIGH);
     digitalWrite(rightRev, LOW);
     digitalWrite(leftRev, LOW);    
-  }
+  } else if (distance < revDistance) {
+    analogWrite(enRight,75);
+    analogWrite(enLeft, 75);
+    digitalWrite(right, LOW);
+    digitalWrite(left, LOW);
+    digitalWrite(rightRev, HIGH);
+    digitalWrite(leftRev, HIGH);
+  } else {
+      float directionDistance = map((servo_pos - 90)*(spookDistance - distance),
+                                  -45*spookDistance, 45*spookDistance, 100, 255);
+      //WIP
+      analogWrite(enRight, directionDistance);
+      analogWrite(enLeft, directionDistance);
+    }
 }
