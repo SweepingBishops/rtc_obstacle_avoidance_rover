@@ -1,26 +1,36 @@
 #include <Servo.h>
 Servo servo;
+const int servoPin=2;
+
+// UltraSound Pins
 const int trigPin = 9;
 const int echoPin=10;
+
+// Motor controller
 const int enRight = 3;
 const int right = 4;
-const int rightRev = 5;
+const int rightRev = 5; // The right reverse pin
 const int enLeft = 6;
 const int left = 7;
 const int leftRev = 8;
+
 #define SOUND_VELOCITY 0.034
 long duration;
 float distance;
 
-const int spookDistance = 35;
-const int revDistance=10;
-int servo_pos=45;
-int increaseServoAngle=1;
+const int mem_length = 90;
+float memory[mem_length][2];
+int mem_counter = 0;
+
+const int spookDistance = 35;  // Distance at which the rover stops ignoring obstacles
+const int revDistance=10; // Distance at which the arduino reverses
+int servo_pos=90; // Initial starting angle
+int increaseServoAngle = 1; // Motor step angle (keep positive)
 
 
 
 void setup() {
-  pinMode(trigPin, OUTPUT);
+  pinMode(trigPin,  OUTPUT);
   pinMode(echoPin, INPUT);
   pinMode(enRight, OUTPUT);
   pinMode(enLeft, OUTPUT);
@@ -28,16 +38,14 @@ void setup() {
   pinMode(rightRev, OUTPUT);
   pinMode(left, OUTPUT);
   pinMode(leftRev, OUTPUT);
-  servo.attach(2);
+  servo.attach(servoPin);
   servo.write(servo_pos);
   delay(10);
 }
 
 void loop() {
-  if (servo_pos == 135) {
-    increaseServoAngle = -1;
-  } else if (servo_pos == 45) {
-    increaseServoAngle = 1;
+  if (servo_pos >= 135 or servo_pos <= 45) {
+    increaseServoAngle = -1*increaseServoAngle;
   }
 
   servo_pos += increaseServoAngle;
@@ -58,16 +66,34 @@ void loop() {
     digitalWrite(leftRev, LOW);    
   } else if (distance < revDistance) {
     analogWrite(enRight,75);
-    analogWrite(enLeft, 75);
+    analogWrite(enLeft, 70);
     digitalWrite(right, LOW);
     digitalWrite(left, LOW);
     digitalWrite(rightRev, HIGH);
     digitalWrite(leftRev, HIGH);
   } else {
-      float directionDistance = map((servo_pos - 90)*(spookDistance - distance),
-                                  -45*spookDistance, 45*spookDistance, 100, 255);
-      //WIP
-      analogWrite(enRight, directionDistance);
-      analogWrite(enLeft, directionDistance);
+      int max_dist=0;
+      int pos;
+      
+      for (int i = 0; i < mem_length; i++ ) {
+              if (memory[i][1] > max_dist) {
+                      max_dist = memory[i][1];
+                      pos = memory[i][0];
+                  }
+          }
+
+      float ch_direction = map(pos, 45, 135, -50, 50);
+      
+      analogWrite(enRight, 100 + ch_direction);
+      analogWrite(enLeft,  100 - ch_direction);
+
+      digitalWrite(right, HIGH);
+      digitalWrite(left, HIGH);
+      digitalWrite(rightRev, LOW);
+      digitalWrite(leftRev, LOW);    
     }
+
+      mem_counter = (mem_counter + 1)%20;
+      memory[mem_counter][0] = distance;
+      memory[mem_counter][1] = servo_pos;
 }
